@@ -134,6 +134,39 @@ class ConfigLoader:
         "config.local.yaml",
         "config.local.yml",
     ]
+
+    # 环境变量前缀
+    ENV_PREFIX = "GAR_"
+
+    # 环境变量到配置路径的映射
+    ENV_KEY_MAP = {
+        "REGISTRATION_TOTAL_ACCOUNTS": ("registration", "total_accounts"),
+        "REGISTRATION_MIN_AGE": ("registration", "min_age"),
+        "REGISTRATION_MAX_AGE": ("registration", "max_age"),
+        "EMAIL_WORKER_URL": ("email", "worker_url"),
+        "EMAIL_DOMAIN": ("email", "domain"),
+        "EMAIL_PREFIX_LENGTH": ("email", "prefix_length"),
+        "EMAIL_WAIT_TIMEOUT": ("email", "wait_timeout"),
+        "EMAIL_POLL_INTERVAL": ("email", "poll_interval"),
+        "EMAIL_ADMIN_PASSWORD": ("email", "admin_password"),
+        "BROWSER_MAX_WAIT_TIME": ("browser", "max_wait_time"),
+        "BROWSER_SHORT_WAIT_TIME": ("browser", "short_wait_time"),
+        "BROWSER_USER_AGENT": ("browser", "user_agent"),
+        "PASSWORD_LENGTH": ("password", "length"),
+        "PASSWORD_CHARSET": ("password", "charset"),
+        "RETRY_HTTP_MAX_RETRIES": ("retry", "http_max_retries"),
+        "RETRY_HTTP_TIMEOUT": ("retry", "http_timeout"),
+        "RETRY_ERROR_PAGE_MAX_RETRIES": ("retry", "error_page_max_retries"),
+        "RETRY_BUTTON_CLICK_MAX_RETRIES": ("retry", "button_click_max_retries"),
+        "BATCH_INTERVAL_MIN": ("batch", "interval_min"),
+        "BATCH_INTERVAL_MAX": ("batch", "interval_max"),
+        "FILES_ACCOUNTS_FILE": ("files", "accounts_file"),
+        "PAYMENT_CREDIT_CARD_NUMBER": ("payment", "credit_card", "number"),
+        "PAYMENT_CREDIT_CARD_EXPIRY": ("payment", "credit_card", "expiry"),
+        "PAYMENT_CREDIT_CARD_EXPIRY_MONTH": ("payment", "credit_card", "expiry_month"),
+        "PAYMENT_CREDIT_CARD_EXPIRY_YEAR": ("payment", "credit_card", "expiry_year"),
+        "PAYMENT_CREDIT_CARD_CVC": ("payment", "credit_card", "cvc"),
+    }
     
     def __init__(self, config_path: Optional[str] = None):
         """
@@ -166,29 +199,69 @@ class ConfigLoader:
             config_file = Path(self.config_path)
         else:
             config_file = self._find_config_file()
-        
+
         if config_file is None or not config_file.exists():
             print("⚠️ 未找到配置文件 config.yaml")
             print("   请复制 config.example.yaml 为 config.yaml 并修改配置")
+            print("   或设置环境变量覆盖配置（参考 README）")
             print("   使用默认配置继续运行...")
-            return
         
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                self.raw_config = yaml.safe_load(f) or {}
-            
-            self.config_path = str(config_file)
-            print(f"📄 已加载配置文件: {config_file.name}")
-            
-            # 解析配置到数据类
-            self._parse_config()
-            
+            if config_file and config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    self.raw_config = yaml.safe_load(f) or {}
+
+                self.config_path = str(config_file)
+                print(f"📄 已加载配置文件: {config_file.name}")
+
         except yaml.YAMLError as e:
             print(f"❌ 配置文件格式错误: {e}")
             sys.exit(1)
         except Exception as e:
             print(f"❌ 加载配置文件失败: {e}")
             sys.exit(1)
+
+        self._apply_env_overrides()
+        self._parse_config()
+
+    def _apply_env_overrides(self) -> None:
+        """从环境变量读取并覆盖配置"""
+        for env_key, path in self.ENV_KEY_MAP.items():
+            full_key = f"{self.ENV_PREFIX}{env_key}"
+            if full_key not in os.environ:
+                continue
+
+            raw_value = os.environ[full_key]
+            value = self._cast_env_value(path, raw_value)
+
+            target = self.raw_config
+            for part in path[:-1]:
+                target = target.setdefault(part, {})
+
+            target[path[-1]] = value
+
+    def _get_default_for_path(self, path: tuple[str, ...]) -> Any:
+        """获取默认配置值用于类型推断"""
+        current: Any = self.config
+        for part in path:
+            current = getattr(current, part, None)
+            if current is None:
+                return None
+        return current
+
+    def _cast_env_value(self, path: tuple[str, ...], value: str) -> Any:
+        """根据默认值类型将环境变量转换为合适的类型"""
+        default_value = self._get_default_for_path(path)
+
+        if isinstance(default_value, bool):
+            return value.lower() in {"1", "true", "yes", "on"}
+        if isinstance(default_value, int):
+            try:
+                return int(value)
+            except ValueError:
+                print(f"⚠️ 环境变量 {self.ENV_PREFIX}{'_'.join(path).upper()} 需要整数，已忽略当前值")
+                return default_value
+        return value
     
     def _parse_config(self) -> None:
         """解析原始配置到数据类"""
