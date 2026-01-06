@@ -272,15 +272,18 @@ async function triggerWebdavBackup() {
     setWebdavStatus('正在执行备份...');
     try {
         const res = await fetch('/api/webdav/backup', { method: 'POST' });
-        const data = await res.json();
+        if (!res.ok) {
+            throw new Error((await res.text()) || '备份失败');
+        }
 
-        if (!res.ok || !data.success) {
+        const data = await res.json();
+        if (!data.success) {
             throw new Error(data.message || '备份失败');
         }
 
         setWebdavStatus(data.message || '备份成功');
     } catch (e) {
-        setWebdavStatus(e, true);
+        setWebdavStatus(e.message || e, true);
     }
 }
 

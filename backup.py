@@ -140,7 +140,7 @@ class WebDavBackupManager:
         for segment in segments:
             current += f"/{segment}"
             url = f"{base}{current}"
-            resp = requests.request("MKCOL", url, auth=auth)
+            resp = requests.request("MKCOL", url, auth=auth, timeout=30)
             if resp.status_code in {201, 301, 405, 409, 207}:
                 continue
             if resp.status_code >= 400:
@@ -151,7 +151,12 @@ class WebDavBackupManager:
     ) -> None:
         url = f"{base_url.rstrip('/')}/{remote_path}"
         with local_path.open("rb") as handle:
-            resp = requests.put(url, data=handle, auth=self._build_auth(config))
+            resp = requests.put(
+                url,
+                data=handle,
+                auth=self._build_auth(config),
+                timeout=30,
+            )
             if resp.status_code not in {200, 201, 204}:
                 raise RuntimeError(f"上传失败: {resp.status_code} {resp.text}")
 
