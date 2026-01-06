@@ -6,6 +6,7 @@ let pollInterval = null;
 document.addEventListener('DOMContentLoaded', () => {
     switchTab('dashboard');
     startPolling();
+    loadWebdavConfig();
 });
 
 // 切换视图
@@ -15,9 +16,11 @@ function switchTab(tabName) {
 
     document.getElementById(`view-${tabName}`).classList.add('active');
 
-    // 找到对应的 nav item 高亮
-    const navIndex = tabName === 'dashboard' ? 0 : 1;
-    document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(el => {
+        if (el.dataset.tab === tabName) {
+            el.classList.add('active');
+        }
+    });
 
     if (tabName === 'accounts') {
         loadAccounts();
@@ -213,4 +216,80 @@ function filterAccounts() {
         acc.email.toLowerCase().includes(term)
     );
     renderAccounts(filtered);
+}
+
+// WebDAV 配置
+async function loadWebdavConfig() {
+    try {
+        const res = await fetch('/api/webdav/config');
+        const cfg = await res.json();
+
+        document.getElementById('webdavEnabled').checked = !!cfg.enabled;
+        document.getElementById('webdavUrl').value = cfg.url || '';
+        document.getElementById('webdavUsername').value = cfg.username || '';
+        document.getElementById('webdavRemoteDir').value = cfg.remote_dir || 'oai_accounts';
+        document.getElementById('webdavInterval').value = cfg.interval_minutes ?? 0;
+        document.getElementById('webdavPassword').value = '';
+
+        setWebdavStatus('已加载配置');
+    } catch (e) {
+        setWebdavStatus(`加载失败: ${e}`, true);
+    }
+}
+
+async function saveWebdavConfig() {
+    const passwordInput = document.getElementById('webdavPassword').value;
+    const payload = {
+        enabled: document.getElementById('webdavEnabled').checked,
+        url: document.getElementById('webdavUrl').value,
+        username: document.getElementById('webdavUsername').value,
+        remote_dir: document.getElementById('webdavRemoteDir').value,
+        interval_minutes: parseInt(document.getElementById('webdavInterval').value || '0', 10),
+    };
+
+    // 如果密码为空则不覆盖现有值
+    if (passwordInput !== '') {
+        payload.password = passwordInput;
+    }
+
+    try {
+        const res = await fetch('/api/webdav/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        setWebdavStatus('保存成功');
+        document.getElementById('webdavPassword').value = '';
+    } catch (e) {
+        setWebdavStatus(`保存失败: ${e}`, true);
+    }
+}
+
+async function triggerWebdavBackup() {
+    setWebdavStatus('正在执行备份...');
+    try {
+        const res = await fetch('/api/webdav/backup', { method: 'POST' });
+        if (!res.ok) {
+            throw new Error((await res.text()) || '备份失败');
+        }
+
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.message || '备份失败');
+        }
+
+        setWebdavStatus(data.message || '备份成功');
+    } catch (e) {
+        setWebdavStatus(e.message || e, true);
+    }
+}
+
+function setWebdavStatus(msg, isError = false) {
+    const el = document.getElementById('webdavStatus');
+    if (!el) return;
+    el.style.color = isError ? '#c0392b' : '#666';
+    el.textContent = msg;
 }

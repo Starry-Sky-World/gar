@@ -67,3 +67,12 @@ payment:
 # 文件路径配置
 files:
   accounts_file: "registered_accounts.txt"  # 注册成功账号的保存路径
+
+# WebDAV 备份配置（可选）
+webdav:
+  enabled: false
+  url: "https://dav.example.com/remote.php/dav/files/user"  # WebDAV 服务器地址
+  username: ""   # 用户名
+  password: ""   # 密码或应用密码
+  remote_dir: "oai_accounts"  # 远端保存目录
+  interval_minutes: 0  # 定时备份间隔，0 表示关闭

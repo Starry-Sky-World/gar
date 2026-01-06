@@ -12,7 +12,9 @@ from flask import Flask, jsonify, request, send_from_directory
 import main
 import browser
 import email_service
+from backup import backup_manager
 from config import cfg
+from utils import get_accounts_file_path
 
 app = Flask(__name__, static_url_path='')
 
@@ -72,6 +74,7 @@ def hooked_print(*args, **kwargs):
 main.print = hooked_print
 browser.print = hooked_print
 email_service.print = hooked_print
+backup_manager.set_logger(hooked_print)
 
 # ==========================================
 # 🧵 后台工作线程
@@ -138,6 +141,7 @@ def worker_thread(count):
     finally:
         state.is_running = False
         state.current_action = "任务已完成"
+        backup_manager.backup(reason="task_complete")
         main.print("🏁 任务结束")
 
 # ==========================================
@@ -173,11 +177,12 @@ def index():
 def get_status():
     # 获取库存数
     total_inventory = 0
-    if os.path.exists(cfg.files.accounts_file):
+    accounts_path = get_accounts_file_path()
+    if os.path.exists(accounts_path):
         try:
-            with open(cfg.files.accounts_file, 'r', encoding='utf-8') as f:
+            with open(accounts_path, 'r', encoding='utf-8') as f:
                 total_inventory = sum(1 for line in f if '@' in line)
-        except:
+        except Exception:
             pass
 
     return jsonify({
@@ -211,9 +216,10 @@ def stop_task():
 @app.route('/api/accounts')
 def get_accounts():
     accounts = []
-    if os.path.exists(cfg.files.accounts_file):
+    accounts_path = get_accounts_file_path()
+    if os.path.exists(accounts_path):
         try:
-            with open(cfg.files.accounts_file, 'r', encoding='utf-8') as f:
+            with open(accounts_path, 'r', encoding='utf-8') as f:
                 for line in f:
                     parts = line.strip().split('|')
                     if len(parts) >= 2:
@@ -227,6 +233,29 @@ def get_accounts():
             return jsonify({"error": str(e)}), 500
     # 反转列表，最新的在前
     return jsonify(accounts[::-1])
+
+
+@app.route('/api/webdav/config', methods=['GET', 'POST'])
+def webdav_config():
+    if request.method == 'GET':
+        return jsonify(backup_manager.get_config(mask_password=True))
+
+    data = request.json or {}
+    backup_manager.update_config(
+        enabled=data.get('enabled'),
+        url=data.get('url'),
+        username=data.get('username'),
+        password=data.get('password'),
+        remote_dir=data.get('remote_dir'),
+        interval_minutes=data.get('interval_minutes'),
+    )
+    return jsonify({"status": "updated"})
+
+
+@app.route('/api/webdav/backup', methods=['POST'])
+def trigger_webdav_backup():
+    success, message = backup_manager.backup(reason="manual")
+    return jsonify({"success": success, "message": message}), (200 if success else 400)
 
 if __name__ == '__main__':
     from waitress import serve

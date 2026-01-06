@@ -89,6 +89,17 @@ class FilesConfig:
 
 
 @dataclass
+class WebDavConfig:
+    """WebDAV 备份配置"""
+    enabled: bool = False
+    url: str = ""
+    username: str = ""
+    password: str = ""
+    remote_dir: str = "oai_accounts"
+    interval_minutes: int = 0
+
+
+@dataclass
 class CreditCardConfig:
     """信用卡配置"""
     number: str = ""
@@ -114,6 +125,7 @@ class AppConfig:
     retry: RetryConfig = field(default_factory=RetryConfig)
     batch: BatchConfig = field(default_factory=BatchConfig)
     files: FilesConfig = field(default_factory=FilesConfig)
+    webdav: WebDavConfig = field(default_factory=WebDavConfig)
     payment: PaymentConfig = field(default_factory=PaymentConfig)
 
 
@@ -161,6 +173,12 @@ class ConfigLoader:
         "BATCH_INTERVAL_MIN": ("batch", "interval_min"),
         "BATCH_INTERVAL_MAX": ("batch", "interval_max"),
         "FILES_ACCOUNTS_FILE": ("files", "accounts_file"),
+        "WEBDAV_ENABLED": ("webdav", "enabled"),
+        "WEBDAV_URL": ("webdav", "url"),
+        "WEBDAV_USERNAME": ("webdav", "username"),
+        "WEBDAV_PASSWORD": ("webdav", "password"),
+        "WEBDAV_REMOTE_DIR": ("webdav", "remote_dir"),
+        "WEBDAV_INTERVAL_MINUTES": ("webdav", "interval_minutes"),
         "PAYMENT_CREDIT_CARD_NUMBER": ("payment", "credit_card", "number"),
         "PAYMENT_CREDIT_CARD_EXPIRY": ("payment", "credit_card", "expiry"),
         "PAYMENT_CREDIT_CARD_EXPIRY_MONTH": ("payment", "credit_card", "expiry_month"),
@@ -327,6 +345,18 @@ class ConfigLoader:
             self.config.files = FilesConfig(
                 accounts_file=files.get('accounts_file', 'registered_accounts.txt')
             )
+
+        # WebDAV 配置
+        if 'webdav' in self.raw_config:
+            webdav = self.raw_config['webdav']
+            self.config.webdav = WebDavConfig(
+                enabled=webdav.get('enabled', False),
+                url=webdav.get('url', ''),
+                username=webdav.get('username', ''),
+                password=webdav.get('password', ''),
+                remote_dir=webdav.get('remote_dir', 'oai_accounts'),
+                interval_minutes=webdav.get('interval_minutes', 0),
+            )
         
         # 支付配置
         if 'payment' in self.raw_config:
@@ -457,6 +487,7 @@ def print_config_summary() -> None:
     print(f"  Worker URL: {cfg.email.worker_url[:30]}...")
     print(f"  账号保存文件: {cfg.files.accounts_file}")
     print(f"  批量间隔: {cfg.batch.interval_min}-{cfg.batch.interval_max}秒")
+    print(f"  WebDAV 备份: {'开启' if cfg.webdav.enabled else '关闭'}")
     print("=" * 50 + "\n")
 
 

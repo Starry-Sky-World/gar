@@ -17,9 +17,7 @@ from urllib3.util.retry import Retry
 from config import (
     PASSWORD_LENGTH,
     PASSWORD_CHARS,
-    PASSWORD_CHARS,
     TXT_FILE,
-    HTTP_MAX_RETRIES,
     HTTP_MAX_RETRIES,
     HTTP_TIMEOUT,
     USER_AGENT,
@@ -138,7 +136,7 @@ def save_to_txt(email: str, password: str = None, status="已注册"):
     如果账号已存在，则更新其信息
     """
     try:
-        file_path = os.path.join(os.path.dirname(__file__), TXT_FILE)
+        file_path = get_accounts_file_path()
         current_date = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # 读取现有内容
@@ -185,6 +183,11 @@ def update_account_status(email: str, new_status: str, password: str = None):
         password: 如果需要更新密码，则传入新密码，否则为 None
     """
     save_to_txt(email, password, new_status)
+
+
+def get_accounts_file_path() -> str:
+    """获取账号文件的绝对路径"""
+    return os.path.join(os.path.dirname(__file__), TXT_FILE)
 
 
 def extract_verification_code(content: str):

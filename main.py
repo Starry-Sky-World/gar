@@ -24,6 +24,7 @@ from config import (
     BATCH_INTERVAL_MIN,
     BATCH_INTERVAL_MAX
 )
+from backup import backup_manager
 from utils import generate_random_password, save_to_txt, update_account_status
 from email_service import create_temp_email, wait_for_verification_email
 from browser import (
@@ -230,8 +231,11 @@ def run_batch():
         print("\n📋 成功注册的账号:")
         for email, password in registered_accounts:
             print(f"   - {email}")
-    
+
     print("=" * 60)
+
+    # 执行一次备份
+    backup_manager.backup(reason="batch_complete")
 
 
 if __name__ == "__main__":
