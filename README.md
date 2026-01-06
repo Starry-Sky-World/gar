@@ -154,6 +154,15 @@ batch:
 files:
   accounts_file: "registered_accounts.txt"
 
+# WebDAV 备份（可选）
+webdav:
+  enabled: false
+  url: "https://dav.example.com/remote.php/dav/files/user"
+  username: "your-user"
+  password: "your-password"
+  remote_dir: "oai_accounts"
+  interval_minutes: 0
+
 # 支付信息（用于 Plus 试用）
 payment:
   credit_card:
@@ -198,6 +207,18 @@ export GAR_EMAIL_ADMIN_PASSWORD="your-admin-password"
 | `GAR_EMAIL_WORKER_URL` | ✅ | 无 | `email.worker_url` | Cloudflare 临时邮箱 Worker 的完整访问地址 |
 | `GAR_EMAIL_DOMAIN` | ✅ | 无 | `email.domain` | 临时邮箱接收域名（需要在 Cloudflare Email Routing 中配置） |
 | `GAR_EMAIL_ADMIN_PASSWORD` | ✅ | 无 | `email.admin_password` | 临时邮箱 Worker 的管理员密码，用于轮询和读取邮件 |
+| `GAR_WEBDAV_ENABLED` | ❌ | `false` | `webdav.enabled` | 是否启用 WebDAV 账号备份 |
+| `GAR_WEBDAV_URL` | ❌ | 空 | `webdav.url` | WebDAV 服务器地址 |
+| `GAR_WEBDAV_USERNAME` | ❌ | 空 | `webdav.username` | WebDAV 登录用户名 |
+| `GAR_WEBDAV_PASSWORD` | ❌ | 空 | `webdav.password` | WebDAV 登录密码/应用密码 |
+| `GAR_WEBDAV_REMOTE_DIR` | ❌ | `oai_accounts` | `webdav.remote_dir` | 备份文件存放的远端目录 |
+| `GAR_WEBDAV_INTERVAL_MINUTES` | ❌ | `0` | `webdav.interval_minutes` | 定时备份间隔（分钟），0 表示关闭 |
+
+### WebDAV 备份说明
+
+- 可通过配置文件或环境变量开启 `webdav.enabled`。
+- 每次任务结束会将账号文件上传到 WebDAV 的 `oai_accounts/<timestamp>_accounts.txt` 下，便于历史追溯。
+- 设置 `webdav.interval_minutes` 后会按间隔自动备份，手动模式可在 Web 界面点击「立即备份」。
 | `GAR_PAYMENT_CREDIT_CARD_NUMBER` | ✅（绑卡） | 无 | `payment.credit_card.number` | 用于 Plus 订阅的信用卡卡号 |
 | `GAR_PAYMENT_CREDIT_CARD_EXPIRY` | ✅（绑卡） | 无 | `payment.credit_card.expiry` | 信用卡有效期（MMYY），与 `expiry_month`/`expiry_year` 二选一 |
 | `GAR_PAYMENT_CREDIT_CARD_EXPIRY_MONTH` | ✅（绑卡） | 无 | `payment.credit_card.expiry_month` | 信用卡有效期-月（MM），与 `expiry`/`expiry_year` 组合使用 |
