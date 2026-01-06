@@ -80,6 +80,8 @@ cp config.example.yaml config.yaml
 
 然后编辑 `config.yaml` 填入你的配置。
 
+> 也可以通过环境变量覆盖配置，适用于容器/CI 环境。详见下方“环境变量配置”。
+
 ### 3. 运行
 
 **方式一：Web 控制台（推荐）**
@@ -179,6 +181,34 @@ payment:
 | 最大年龄 | `registration.max_age` | 40 | 随机生日的最大年龄 |
 | 密码长度 | `password.length` | 16 | 密码长度 |
 | 邮件超时 | `email.wait_timeout` | 120 | 等待验证邮件超时（秒） |
+
+### 环境变量配置
+
+除了 `config.yaml`，你也可以使用环境变量覆盖配置，方便在容器或 CI 环境中传递敏感信息。所有环境变量都需要以 `GAR_` 为前缀，例如：
+
+```bash
+export GAR_EMAIL_DOMAIN="your-domain.com"
+export GAR_EMAIL_ADMIN_PASSWORD="your-admin-password"
+```
+
+常用环境变量对照表：
+
+| 环境变量 | 对应配置路径 |
+|----------|--------------|
+| `GAR_EMAIL_WORKER_URL` | `email.worker_url` |
+| `GAR_EMAIL_DOMAIN` | `email.domain` |
+| `GAR_EMAIL_ADMIN_PASSWORD` | `email.admin_password` |
+| `GAR_EMAIL_PREFIX_LENGTH` | `email.prefix_length` |
+| `GAR_EMAIL_WAIT_TIMEOUT` | `email.wait_timeout` |
+| `GAR_EMAIL_POLL_INTERVAL` | `email.poll_interval` |
+| `GAR_REGISTRATION_TOTAL_ACCOUNTS` | `registration.total_accounts` |
+| `GAR_BROWSER_USER_AGENT` | `browser.user_agent` |
+| `GAR_PASSWORD_LENGTH` | `password.length` |
+| `GAR_RETRY_HTTP_TIMEOUT` | `retry.http_timeout` |
+| `GAR_FILES_ACCOUNTS_FILE` | `files.accounts_file` |
+| `GAR_PAYMENT_CREDIT_CARD_NUMBER` | `payment.credit_card.number` |
+
+> 其他字段也支持环境变量覆盖，命名规则请参考上述表格中的前缀和路径格式。
 
 ## 模块说明
 
